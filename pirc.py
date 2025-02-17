@@ -12,7 +12,6 @@ from os import environ
 
 # Note: You can set PIRC_LOG_LEVEL=10 to enable DEBUG (10) level logging
 log = logging.getLogger("pirc")
-logging.basicConfig(level = int(environ.get("PIRC_LOG_LEVEL", logging.INFO)))
 
 # Generic select-based TCP server
 class TcpServer:
@@ -319,20 +318,23 @@ class IrcServer(TcpServer):
 def print_usage():
     print(f"\nUSAGE: {sys.argv[0]} <host/IP>[:<port>] [MOTD file]\n")
 
-if len(sys.argv) <= 1 or sys.argv[1] == "--help":
-    print_usage()
-    exit(0)
+if __name__ == "__main__":
+    logging.basicConfig(level = int(environ.get("PIRC_LOG_LEVEL", logging.INFO)))
+    
+    if len(sys.argv) <= 1 or sys.argv[1] == "--help":
+        print_usage()
+        exit(0)
 
-motd = ""
-if len(sys.argv) >= 3:
-    with open(sys.argv[2]) as f:
-        motd = f.read().splitlines()
+    motd = ""
+    if len(sys.argv) >= 3:
+        with open(sys.argv[2]) as f:
+            motd = f.read().splitlines()
 
-bind_info = re.match(r"^(?P<host>[^:]*?)(:(?P<port>[0-9]+))?$", sys.argv[1])
-if (not bind_info):
-    print(f"ERROR: couldn't parse bind info: \"{sys.argv[1]}\"")
-    print_usage()
-    exit(-1)
+    bind_info = re.match(r"^(?P<host>[^:]*?)(:(?P<port>[0-9]+))?$", sys.argv[1])
+    if (not bind_info):
+        print(f"ERROR: couldn't parse bind info: \"{sys.argv[1]}\"")
+        print_usage()
+        exit(-1)
 
-server = IrcServer(host=bind_info["host"], port=int(bind_info["port"] or 6667), motd=motd)
-server.run()
+    server = IrcServer(host=bind_info["host"], port=int(bind_info["port"] or 6667), motd=motd)
+    server.run()
