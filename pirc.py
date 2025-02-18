@@ -15,11 +15,12 @@ log = logging.getLogger("pirc")
 
 # Generic select-based TCP server
 class TcpServer:
-    def __init__(self, host="localhost", port=1234, max_message_size=1000, max_pending_clients=5) -> None:
+    def __init__(self, host="localhost", port=1234, max_message_size=1000, max_pending_clients=5, max_select_timeout: float|None = None) -> None:
         self.host = host
         self.port = port
         self.max_pending_clients = max_pending_clients
         self.max_message_size = max_message_size
+        self.max_select_timeout = max_select_timeout
 
     def run(self) -> None:
         self.listener = socket.socket()
@@ -31,11 +32,12 @@ class TcpServer:
         self.selector.register(self.listener, selectors.EVENT_READ)
         log.info(f"Listening on: {self.host}:{self.port}")
         while True:
-            events = self.selector.select()
+            events = self.selector.select(self.max_select_timeout)
             for key, _mask in events:
                 assert isinstance(key.fileobj, socket.socket)
                 if key.fileobj == self.listener: self.accept()
                 else: self.read(key.fileobj, key.data)
+            if not events and hasattr(self, "on_idle"): getattr(self, "on_idle")()
 
     def accept(self) -> None:
         client, _address = self.listener.accept()
@@ -320,7 +322,7 @@ def print_usage():
 
 if __name__ == "__main__":
     logging.basicConfig(level = int(environ.get("PIRC_LOG_LEVEL", logging.INFO)))
-    
+
     if len(sys.argv) <= 1 or sys.argv[1] == "--help":
         print_usage()
         exit(0)
